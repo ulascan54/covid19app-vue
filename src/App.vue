@@ -1,7 +1,11 @@
 <template>
   <div class="container">
     <div class="form-group mb-4">
-      <select v-model="selectedCountry" class="form-control">
+      <select
+        v-model="selectedCountry"
+        class="form-control"
+        @change="getDataByCountry"
+      >
         <option value="">Global</option>
         <option
           v-for="country in countries"
@@ -51,13 +55,25 @@
           <th scope="col">Recovered</th>
         </tr>
       </thead>
-      <tr v-for="(item,index) in data.Countries" :key="index">
-        <th scope="row">{{index+1}}</th>
-        <td>{{ numberFormat(item.Country) }}</td>
-        <td>{{ numberFormat(item.TotalConfirmed) }}</td>
-        <td>{{ numberFormat(item.TotalDeaths) }}</td>
-        <td>{{ numberFormat(item.TotelRecoverd) }}</td>
-      </tr>
+      <tbody v-if="selectedCountry === ''">
+        <tr v-for="(item, index) in data.Countries" :key="index">
+          <th scope="row">{{ index + 1 }}</th>
+          <td>{{ numberFormat(item.Country) }}</td>
+          <td>{{ numberFormat(item.TotalConfirmed) }}</td>
+          <td>{{ numberFormat(item.TotalDeaths) }}</td>
+          <td>{{ numberFormat(item.TotelRecoverd) }}</td>
+        </tr>
+      </tbody>
+      <tbody v-else>
+        <tr>
+          <th scope="row" colspan="2">
+            {{ numberFormat(filteredData.Country) }}
+          </th>
+          <td>{{ numberFormat(filteredData.TotalConfirmed) }}</td>
+          <td>{{ numberFormat(filteredData.TotalDeaths) }}</td>
+          <td>{{ numberFormat(filteredData.TotelRecoverd) }}</td>
+        </tr>
+      </tbody>
     </table>
   </div>
 </template>
@@ -72,12 +88,13 @@ export default {
       confirmed: 0,
       deaths: 0,
       recovered: 0,
+      filteredData: [],
     };
   },
   methods: {
     getCountries() {
-      axios.get("https://api.covid19api.com/countries").then((response) => {
-        this.countries = response.data;
+      axios.get("https://api.covid19api.com/summary").then((response) => {
+        this.countries = response.data.Countries;
       });
     },
     getSummaryData() {
@@ -85,14 +102,34 @@ export default {
         this.confirmed = response.data.Global.TotalConfirmed;
         this.deaths = response.data.Global.TotalDeaths;
         this.recovered = response.data.Global.TotalRecovered;
-        this.data=response.data
+        this.data = response.data;
       });
     },
     numberFormat(number) {
-      if (number===0 || number==="" || number===null  || number===undefined) {
-        number=0
+      if (
+        number === 0 ||
+        number === "" ||
+        number === null ||
+        number === undefined
+      ) {
+        number = 0;
       }
       return number.toLocaleString();
+    },
+    getDataByCountry() {
+      if (this.selectedCountry !== "") {
+        let data = this.data.Countries.filter((country) => {
+          return country.Slug === this.selectedCountry;
+        });
+        data = data[0];
+        console.log("data :>> ", data);
+        this.filteredData = data;
+        this.deaths = data.TotalDeaths;
+        this.recovered = data.TotalRecovered;
+        this.confirmed = data.TotalConfirmed;
+      }else{
+        this.getSummaryData()
+      }
     },
   },
   mounted() {
